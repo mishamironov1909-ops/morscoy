@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Морской бой ONLINE</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{--yellow:#ffd23f;--pink:#ff4fa3;--red:#ff3b4e;--purple:#7b2cbf;--cs:min(8vw,34px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:'Trebuchet MS',system-ui,sans-serif;color:#fff;
+  background:linear-gradient(135deg,#2a0650,#6a1b9a 45%,#c2185b 100%);background-attachment:fixed;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 15% 20%,rgba(255,210,63,.25),transparent 40%),
+             radial-gradient(circle at 85% 80%,rgba(255,79,163,.3),transparent 45%);
+  animation:float 8s ease-in-out infinite alternate}
+@keyframes float{to{transform:scale(1.15) translateY(-10px)}}
+.hidden{display:none!important}
+.screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;position:relative}
+#game.screen{align-items:flex-start}
+.card{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:2px solid rgba(255,255,255,.25);border-radius:24px;padding:26px;width:100%;max-width:440px;
+  box-shadow:0 20px 60px rgba(0,0,0,.4)}
+h1{margin:0;text-align:center;font-size:34px;letter-spacing:2px;
+  background:linear-gradient(90deg,var(--yellow),var(--pink),var(--red));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{text-align:center;margin:2px 0 18px;letter-spacing:8px;font-weight:700;color:var(--yellow)}
+label{display:block;margin:14px 0 6px;font-size:13px;font-weight:700;color:#ffd6ec;text-transform:uppercase;letter-spacing:1px}
+input{width:100%;padding:13px 15px;border-radius:14px;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.28);
+  color:#fff;font-size:18px;font-weight:700;outline:none;transition:.2s}
+input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,210,63,.25)}
+#key{text-transform:uppercase;letter-spacing:4px;text-align:center;font-size:22px}
+button{font:inherit;font-weight:800;cursor:pointer;border:0;border-radius:14px;padding:13px 18px;color:#3b0a6b;
+  background:linear-gradient(135deg,var(--yellow),#ffae00);box-shadow:0 5px 0 #b97800;transition:.12s}
+button:hover{filter:brightness(1.08)}
+button:active{transform:translateY(4px);box-shadow:0 1px 0 #b97800}
+button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.6)}
+button.pink{background:linear-gradient(135deg,var(--pink),var(--red));color:#fff;box-shadow:0 5px 0 #a3123a}
+button.pink:active{box-shadow:0 1px 0 #a3123a}
+button.ghost{background:rgba(255,255,255,.15);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.3)}
+.row{display:flex;gap:10px;margin-top:18px}.row button{flex:1}
+.wallet{margin-top:10px;font-size:18px;color:var(--yellow);font-weight:800}
+.chips{display:flex;gap:8px}
+.chip{flex:1;padding:10px 0;background:rgba(0,0,0,.28);color:#fff;box-shadow:none;border:2px solid rgba(255,255,255,.25)}
+.chip.sel{background:linear-gradient(135deg,var(--pink),var(--red));border-color:#fff}
+.hint{font-size:12px;color:#e9c9ff;text-align:center;margin:16px 0 0;line-height:1.5}
+#btnBonus{width:100%;margin-top:12px}
+.bigkey{font-size:60px;font-weight:900;letter-spacing:10px;text-align:center;color:var(--yellow);text-shadow:0 0 25px rgba(255,210,63,.6);margin:10px 0}
+.center{text-align:center}
+.dots::after{content:'';animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+
+/* game */
+.wrap{width:100%;max-width:900px;margin:0 auto}
+.topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;
+  background:rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.2);border-radius:18px;padding:10px 14px;margin-bottom:12px}
+.pill{background:rgba(255,255,255,.12);border-radius:999px;padding:6px 12px;font-weight:800;font-size:14px}
+.pill b{color:var(--yellow)}
+.status{text-align:center;font-weight:900;font-size:18px;padding:12px;border-radius:16px;margin-bottom:12px;
+  background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.2)}
+.status.go{background:linear-gradient(135deg,var(--pink),var(--red));animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 25px rgba(255,79,163,.9)}}
+.boards{display:flex;flex-wrap:wrap;gap:18px;justify-content:center}
+.bwrap h3{margin:0 0 8px;text-align:center;font-size:15px;color:var(--yellow)}
+.bwrap.dim{opacity:.45;pointer-events:none}
+.board{display:grid;grid-template-columns:repeat(10,var(--cs));gap:2px;padding:8px;
+  background:rgba(0,0,0,.28);border-radius:16px;border:2px solid rgba(255,255,255,.2)}
+.cell{width:var(--cs);height:var(--cs);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;font-size:calc(var(--cs)*.55);font-weight:900;transition:background .15s,transform .15s;user-select:none}
+.cell.ship{background:linear-gradient(135deg,var(--yellow),#ffb300);border-color:#fff3b0;box-shadow:0 0 8px rgba(255,210,63,.6)}
+.cell.miss::after{content:'';width:30%;height:30%;border-radius:50%;background:var(--pink)}
+.cell.hit{background:linear-gradient(135deg,var(--red),#b0002a);border-color:#ff9aa6;animation:pop .35s}
+.cell.hit::after{content:'✖'}
+.cell.sunk{background:linear-gradient(135deg,#7a0020,#3b0010);border-color:var(--red);animation:pop .35s}
+.cell.sunk::after{content:'✖';color:#ff8a98}
+.cell.pv-ok{background:rgba(255,210,63,.65)!important}
+.cell.pv-bad{background:rgba(255,59,78,.65)!important}
+.enemy .cell.can{cursor:crosshair}
+.enemy .cell.can:hover{background:rgba(255,79,163,.55);transform:scale(1.1)}
+@keyframes pop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:16px}
+
+/* modal */
+#modal{position:fixed;inset:0;background:rgba(20,0,40,.75);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+#modal .card{text-align:center}
+#mTitle{font-size:38px;font-weight:900;margin:0 0 8px}
+#mTitle.win{color:var(--yellow);text-shadow:0 0 25px rgba(255,210,63,.7)}
+#mTitle.lose{color:var(--red)}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(100px);background:var(--red);color:#fff;
+  padding:12px 20px;border-radius:14px;font-weight:800;z-index:100;transition:.3s;max-width:90vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.cf{position:fixed;top:-14px;width:10px;height:14px;z-index:99;animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+</style>
+</head>
+<body>
+
+<!-- МЕНЮ -->
+<div id="menu" class="screen">
+  <div class="card">
+    <h1>⚓ МОРСКОЙ БОЙ</h1>
+    <div class="sub">ONLINE</div>
+
+    <label>Ваше имя</label>
+    <input id="name" maxlength="12" placeholder="Например: Рома" autocomplete="off">
+    <div class="wallet">💰 Баланс: <span id="menuCoins">—</span></div>
+    <button id="btnBonus" class="pink hidden">🎁 Получить бонус +500</button>
+
+    <label>Ключ входа</label>
+    <input id="key" maxlength="8" placeholder="AJ39" autocomplete="off">
+
+    <label>Ставка (если создаёте комнату)</label>
+    <div class="chips" id="bets"></div>
+
+    <div class="row">
+      <button id="btnJoin" class="pink">🚪 Войти по ключу</button>
+      <button id="btnCreate">✨ Создать комнату</button>
+    </div>
+    <p class="hint">Создайте комнату (ключ можно придумать самому или оставить пустым — выдадим случайный) и отправьте ключ другу. Победитель забирает ставку!</p>
+  </div>
+</div>
+
+<!-- ОЖИДАНИЕ -->
+<div id="wait" class="screen hidden">
+  <div class="card center">
+    <h1>КОМНАТА СОЗДАНА</h1>
+    <div class="sub" style="letter-spacing:2px">Отправьте ключ другу</div>
+    <div class="bigkey" id="waitKey">----</div>
+    <div class="wallet">Ставка: 💰 <span id="waitBet">100</span></div>
+    <p class="dots" style="margin:18px 0;font-weight:700">Ждём соперника</p>
+    <div class="row">
+      <button id="btnCopy">📋 Копировать</button>
+      <button id="btnCancel" class="ghost">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- ИГРА -->
+<div id="game" class="screen hidden">
+  <div class="wrap">
+    <div class="topbar">
+      <span class="pill">👤 <b id="tbMe"></b></span>
+      <span class="pill">💰 <b id="tbCoins"></b></span>
+      <span class="pill">🎯 Ставка <b id="tbBet"></b></span>
+      <span class="pill">🔑 <b id="tbKey"></b></span>
+      <button id="btnLeave" class="ghost" style="padding:8px 14px">Выйти</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="boards">
+      <div class="bwrap"><h3 id="myTitle"></h3><div class="board" id="myBoard"></div></div>
+      <div class="bwrap dim" id="enWrap"><h3 id="enTitle"></h3><div class="board enemy" id="enBoard"></div></div>
+    </div>
+    <div class="controls">
+      <button id="btnRot" class="ghost">↔ Горизонтально</button>
+      <button id="btnRand" class="pink">🎲 Случайно</button>
+      <button id="btnUndo" class="ghost">↩ Отмена</button>
+      <button id="btnReady">✅ Готов</button>
+    </div>
+  </div>
+</div>
+
+<!-- РЕЗУЛЬТАТ -->
+<div id="modal" class="hidden">
+  <div class="card">
+    <h2 id="mTitle"></h2>
+    <p id="mText" style="font-size:18px;font-weight:700"></p>
+    <div class="row">
+      <button id="btnRematch">🔁 Реванш</button>
+      <button id="btnMenu" class="ghost">В меню</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const PREFIX='bship-online-v1-';
+const SIZE=10, LENS=[4,3,3,2,2,2,1,1,1,1];
+const $=s=>document.querySelector(s);
+
+let me={name:'',coins:1000}, opp={name:'?'};
+let peer=null, conn=null, isHost=false, key='', bet=100, phase='menu';
+let grid,ships,pIdx,horiz=true,myReady,oppReady,myTurn,enemy,myMark,received,rematchMe,rematchOpp;
+
+/* ---------- утилиты ---------- */
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),3000)}
+function show(id){['menu','wait','game'].forEach(s=>$('#'+s).classList.toggle('hidden',s!==id))}
+const rd=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const wr=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const rm=k=>{try{localStorage.removeItem(k)}catch(e){}};
+const ck=n=>'bship_coins_'+n.toLowerCase(), pk=n=>'bship_pending_'+n.toLowerCase();
+function coinsOf(n){const v=rd(ck(n));return v===null?1000:(parseInt(v,10)||0)}
+function saveCoins(){wr(ck(me.name),me.coins)}
+const normKey=s=>s.toUpperCase().replace(/[^A-Z0-9]/g,'');
+function randKey(){const L='ABCDEFGHJKLMNPQRSTUVWXYZ',D='23456789',r=a=>a[Math.floor(Math.random()*a.length)];return r(L)+r(L)+r(D)+r(D)}
+function confetti(){const c=['#ffd23f','#ff4fa3','#ff3b4e','#b44cff'];
+  for(let i=0;i<60;i++){const d=document.createElement('i');d.className='cf';d.style.left=Math.random()*100+'vw';
+    d.style.background=c[i%4];d.style.animationDuration=(1.8+Math.random()*2)+'s';d.style.animationDelay=Math.random()*.6+'s';
+    document.body.appendChild(d);setTimeout(()=>d.remove(),5000)}}
+
+/* ---------- меню ---------- */
+(function initMenu(){
+  const bets=[50,100,250,500],box=$('#bets');
+  bets.forEach(b=>{const x=document.createElement('button');x.className='chip'+(b===bet?' sel':'');x.textContent=b;
+    x.onclick=()=>{bet=b;[...box.children].forEach(c=>c.classList.toggle('sel',c===x))};box.appendChild(x)});
+  const last=rd('bship_lastname');if(last)$('#name').value=last;
+  refreshMenuCoins();
+})();
+function refreshMenuCoins(){const n=$('#name').value.trim();
+  $('#menuCoins').textContent=n?coinsOf(n):'—';
+  $('#btnBonus').classList.toggle('hidden',!n||coinsOf(n)>=50)}
+$('#name').addEventListener('input',refreshMenuCoins);
+$('#btnBonus').onclick=()=>{const n=$('#name').value.trim();if(!n)return;wr(ck(n),coinsOf(n)+500);refreshMenuCoins();toast('🎁 +500 монет!')};
+
+function enter(){
+  const n=$('#name').value.trim();
+  if(!n){toast('Введите имя');$('#name').focus();return false}
+  me.name=n;me.coins=coinsOf(n);wr('bship_lastname',n);
+  const p=rd(pk(n));
+  if(p){me.coins=Math.max(0,me.coins-(parseInt(p,10)||0));rm(pk(n));saveCoins();toast('Вы покинули прошлый бой — ставка списана');}
+  return true;
+}
+$('#btnCreate').onclick=()=>{
+  if(!enter())return;
+  const k=normKey($('#key').value)||randKey();
+  if(k.length<3)return toast('Ключ — минимум 3 символа');
+  if(me.coins<bet)return toast('Не хватает монет для такой ставки');
+  $('#key').value=k;startNet(k,true);
+};
+$('#btnJoin').onclick=()=>{
+  if(!enter())return;
+  const k=normKey($('#key').value);
+  if(k.length<3)return toast('Введите ключ комнаты');
+  $('#key').value=k;startNet(k,false);
+};
+$('#btnCancel').onclick=backToMenu;
+$('#btnMenu').onclick=backToMenu;
+$('#btnCopy').onclick=()=>{try{navigator.clipboard.writeText(key);toast('Ключ скопирован')}catch(e){toast('Ключ: '+key)}};
+
+/* ---------- сеть (PeerJS / WebRTC) ---------- */
+function cleanup(){
+  const c=conn,p=peer;conn=null;peer=null;
+  try{c&&c.close()}catch(e){}
+  try{p&&p.destroy()}catch(e){}
+}
+function backToMenu(){
+  cleanup();phase='menu';$('#modal').classList.add('hidden');
+  show('menu');refreshMenuCoins();
+}
+function startNet(k,host){
+  cleanup();isHost=host;key=k;phase='connecting';
+  toast(host?'Создаём комнату…':'Подключаемся…');
+  peer=new Peer(host?PREFIX+k:undefined);
+  peer.on('open',()=>{
+    if(host){phase='wait';$('#waitKey').textContent=k;$('#waitBet').textContent=bet;show('wait')}
+    else setupConn(peer.connect(PREFIX+k,{reliable:true}));
+  });
+  peer.on('connection',c=>{
+    if(!isHost||conn){c.on('open',()=>{c.send({t:'full'});setTimeout(()=>c.close(),400)});return}
+    setupConn(c);
+  });
+  peer.on('error',e=>{
+    if(phase==='connecting'||phase==='wait'){
+      if(e.type==='unavailable-id')toast('Этот ключ уже занят — придумайте другой');
+      else if(e.type==='peer-unavailable')toast('Комната с таким ключом не найдена');
+      else toast('Ошибка сети: '+e.type);
+      backToMenu();
+    }else if(e.type!=='peer-unavailable')toast('Проблема со связью…');
+  });
+}
+function setupConn(c){
+  conn=c;
+  c.on('open',()=>{if(!isHost)c.send({t:'hello',name:me.name,coins:me.coins})});
+  c.on('data',m=>onData(c,m));
+  c.on('close',()=>onClose(c));
+  c.on('error',()=>{});
+}
+function send(o){try{conn&&conn.open&&conn.send(o)}catch(e){}}
+function onClose(c){
+  if(c!==conn)return;conn=null;
+  if(phase==='battle')endGame(true,'Соперник покинул игру');
+  else if(phase==='over'){$('#btnRematch').disabled=true;$('#btnRematch').textContent='Соперник вышел'}
+  else if(phase==='place'){toast('Соперник вышел из комнаты');backToMenu()}
+}
+function onData(c,m){
+  if(c!==conn||!m||typeof m!=='object')return;
+  switch(m.t){
+    case 'full':toast('Комната занята');backToMenu();break;
+    case 'deny':toast(m.reason||'Отказано');backToMenu();break;
+    case 'hello':
+      if(!isHost||phase!=='wait')return;
+      if(Number(m.coins)<bet){send({t:'deny',reason:'У вас не хватает монет для ставки '+bet});
+        const old=conn;conn=null;setTimeout(()=>{try{old.close()}catch(e){}},400);return}
+      opp.name=String(m.name||'Игрок').slice(0,12);
+      send({t:'welcome',name:me.name,bet});
+      startPlacement();break;
+    case 'welcome':
+      if(isHost)return;
+      opp.name=String(m.name||'Игрок').slice(0,12);bet=Number(m.bet)||100;
+      if(me.coins<bet){toast('Не хватает монет: ставка '+bet);backToMenu();return}
+      startPlacement();break;
+    case 'ready':oppReady=true;maybeStart();break;
+    case 'shot':handleShot(m);break;
+    case 'res':handleRes(m);break;
+    case 'rematch':rematchOpp=true;checkRematch();break;
+  }
+}
+
+/* ---------- игровое поле ---------- */
+function build(el){el.innerHTML='';for(let i=0;i<100;i++){const d=document.createElement('div');d.className='cell';d.dataset.i=i;el.appendChild(d)}}
+build($('#myBoard'));build($('#enBoard'));
+
+function resetState(){
+  grid=Array(100).fill(-1);ships=[];pIdx=0;myReady=false;oppReady=false;myTurn=false;
+  enemy=Array(100).fill(0);myMark=Array(100).fill(0);received=new Set();
+}
+function renderMy(){
+  const cs=$('#myBoard').children;
+  for(let i=0;i<100;i++){let c='cell';const m=myMark[i];
+    if(m===3)c+=' sunk';else if(m===2)c+=' hit';else if(m===1)c+=' miss';else if(grid[i]>=0)c+=' ship';
+    cs[i].className=c}
+}
+function renderEnemy(){
+  const cs=$('#enBoard').children,can=phase==='battle'&&myTurn;
+  for(let i=0;i<100;i++){let c='cell';const m=enemy[i];
+    if(m===3)c+=' sunk';else if(m===2)c+=' hit';else if(m===1)c+=' miss';else if(can)c+=' can';
+    cs[i].className=c}
+}
+function updateUI(){
+  $('#tbMe').textContent=me.name;$('#tbCoins').textContent=me.coins;$('#tbBet').textContent=bet;$('#tbKey').textContent=key;
+  $('#myTitle').textContent='Ваше поле · '+me.name;$('#enTitle').textContent='Соперник · '+opp.name;
+  const st=$('#status');
+  if(phase==='place'){
+    st.textContent=!myReady
+      ?(pIdx<LENS.length?`Расставьте корабли: ${LENS[pIdx]}-палубный · осталось ${LENS.length-pIdx}`:'Все корабли на месте — жмите «Готов»')
+      :(oppReady?'Начинаем…':'Ждём, пока соперник расставит корабли…');
+  }else if(phase==='battle')st.textContent=myTurn?'🔥 ВАШ ХОД — стреляйте по правому полю!':'⏳ Ход соперника…';
+  else st.textContent='Бой окончен';
+  st.className='status'+(phase==='battle'&&myTurn?' go':'');
+  const pl=phase==='place'&&!myReady;
+  ['btnRot','btnRand','btnUndo'].forEach(id=>$('#'+id).disabled=!pl);
+  $('#btnReady').disabled=!(pl&&pIdx===LENS.length);
+  $('.controls').classList.toggle('hidden',phase!=='place');
+  $('#enWrap').classList.toggle('dim',phase==='place');
+  $('#btnRot').textContent=horiz?'↔ Горизонтально':'↕ Вертикально';
+  renderEnemy();
+}
+function startPlacement(){
+  resetState();phase='place';$('#modal').classList.add('hidden');
+  show('game');renderMy();updateUI();
+}
+
+/* ---------- расстановка ---------- */
+function shipCells(i,len,h){
+  const x=i%SIZE,y=(i/SIZE)|0,c=[];
+  for(let k=0;k<len;k++){const cx=h?x+k:x,cy=h?y:y+k;if(cx>=SIZE||cy>=SIZE)return null;c.push(cy*SIZE+cx)}
+  return c;
+}
+function canPlace(cells){
+  if(!cells)return false;
+  for(const c of cells){const x=c%SIZE,y=(c/SIZE)|0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=SIZE||ny>=SIZE)continue;
+      if(grid[ny*SIZE+nx]>=0)return false}}
+  return true;
+}
+function addShip(cells){const id=ships.length;ships.push({cells,hits:0});cells.forEach(c=>grid[c]=id)}
+function place(i){
+  if(pIdx>=LENS.length)return;
+  const cells=shipCells(i,LENS[pIdx],horiz);
+  if(!canPlace(cells)){toast('Сюда нельзя (корабли не должны касаться)');return}
+  addShip(cells);pIdx++;renderMy();updateUI();
+}
+function randomize(){
+  grid=Array(100).fill(-1);ships=[];pIdx=0;
+  for(const len of LENS){
+    let ok=false,t=0;
+    while(!ok&&t++<500){const cells=shipCells(Math.floor(Math.random()*100),len,Math.random()<.5);
+      if(canPlace(cells)){addShip(cells);ok=true}}
+    if(!ok)return randomize();
+    pIdx++;
+  }
+}
+$('#btnRand').onclick=()=>{randomize();renderMy();updateUI()};
+$('#btnRot').onclick=()=>{horiz=!horiz;updateUI()};
+$('#btnUndo').onclick=()=>{if(!ships.length)return;const s=ships.pop();s.cells.forEach(c=>grid[c]=-1);pIdx--;renderMy();updateUI()};
+document.addEventListener('keydown',e=>{if((e.key==='r'||e.key==='к'||e.key==='R'||e.key==='К')&&phase==='place'&&document.activeElement.tagName!=='INPUT'){horiz=!horiz;updateUI()}});
+$('#myBoard').addEventListener('contextmenu',e=>{if(phase==='place'){e.preventDefault();horiz=!horiz;updateUI()}});
+$('#myBoard').addEventListener('mouseover',e=>{
+  if(phase!=='place'||myReady||pIdx>=LENS.length)return;
+  const t=e.target.closest('.cell');if(!t)return;
+  renderMy();const i=+t.dataset.i,cells=shipCells(i,LENS[pIdx],horiz),ok=canPlace(cells),cs=$('#myBoard').children;
+  (cells||[i]).forEach(c=>cs[c].classList.add(ok?'pv-ok':'pv-bad'));
+});
+$('#myBoard').addEventListener('mouseleave',()=>{if(phase==='place')renderMy()});
+$('#myBoard').addEventListener('click',e=>{const t=e.target.closest('.cell');if(t&&phase==='place'&&!myReady)place(+t.dataset.i)});
+$('#enBoard').addEventListener('click',e=>{const t=e.target.closest('.cell');if(t)shoot(+t.dataset.i)});
+
+$('#btnReady').onclick=()=>{myReady=true;send({t:'ready'});renderMy();updateUI();maybeStart()};
+function maybeStart(){
+  if(phase==='place'&&myReady&&oppReady){
+    phase='battle';myTurn=isHost;wr(pk(me.name),bet); // если выйти из боя — ставка сгорит
+    renderMy();updateUI();
+  }
+}
+
+/* ---------- бой ---------- */
+function neighbors(i){const x=i%SIZE,y=(i/SIZE)|0,r=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy;
+    if((dx||dy)&&nx>=0&&ny>=0&&nx<SIZE&&ny<SIZE)r.push(ny*SIZE+nx)}return r}
+
+function shoot(i){
+  if(phase!=='battle'||!myTurn||enemy[i])return;
+  myTurn=false;send({t:'shot',x:i%SIZE,y:(i/SIZE)|0});updateUI();
+}
+function handleShot(m){
+  const x=m.x,y=m.y;
+  if(phase!=='battle'||myTurn||!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=SIZE||y>=SIZE)return;
+  const i=y*SIZE+x;if(received.has(i))return;received.add(i);
+  const id=grid[i];let hit=id>=0,sunk=null,lost=false;
+  if(hit){
+    const s=ships[id];s.hits++;myMark[i]=2;
+    if(s.hits===s.cells.length){sunk=s.cells;s.cells.forEach(c=>myMark[c]=3);lost=ships.every(s=>s.hits===s.cells.length)}
+  }else{myMark[i]=1;myTurn=true}
+  send({t:'res',x,y,hit,sunk,lost});
+  renderMy();updateUI();
+  if(lost)endGame(false,'Все ваши корабли потоплены');
+}
+function handleRes(m){
+  if(phase!=='battle')return;
+  const i=m.y*SIZE+m.x;if(!(i>=0&&i<100))return;
+  if(m.hit){
+    enemy[i]=2;
+    if(Array.isArray(m.sunk)){
+      m.sunk.forEach(c=>{if(c>=0&&c<100)enemy[c]=3});
+      m.sunk.forEach(c=>neighbors(c).forEach(n=>{if(enemy[n]===0)enemy[n]=1}));
+    }
+    myTurn=true;
+  }else{enemy[i]=1;myTurn=false}
+  updateUI();
+  if(m.lost)endGame(true,'Вы потопили весь флот соперника');
+}
+
+/* ---------- конец игры ---------- */
+function endGame(won,reason){
+  if(phase==='over')return;
+  phase='over';rm(pk(me.name));
+  me.coins=Math.max(0,me.coins+(won?bet:-bet));saveCoins();
+  $('#mTitle').textContent=won?'🏆 ПОБЕДА!':'💥 ПОРАЖЕНИЕ';
+  $('#mTitle').className=won?'win':'lose';
+  $('#mText').textContent=`${reason}. ${won?'+':'−'}${bet} монет · Баланс: ${me.coins} 💰`;
+  rematchMe=false;rematchOpp=false;
+  $('#btnRematch').disabled=!conn;$('#btnRematch').textContent=conn?'🔁 Реванш':'Соперник вышел';
+  $('#modal').classList.remove('hidden');updateUI();
+  if(won)confetti();
+}
+$('#btnRematch').onclick=()=>{
+  if(!conn)return;rematchMe=true;send({t:'rematch'});
+  $('#btnRematch').disabled=true;$('#btnRematch').textContent='Ждём соперника…';checkRematch();
+};
+function checkRematch(){
+  if(phase==='over'&&rematchMe&&rematchOpp){
+    if(me.coins<bet){toast('Не хватает монет на ставку');return backToMenu()}
+    startPlacement();
+  }
+}
+$('#btnLeave').onclick=()=>{
+  if(phase==='battle'){
+    if(!confirm('Сдаться? Ставка будет потеряна.'))return;
+    me.coins=Math.max(0,me.coins-bet);saveCoins();rm(pk(me.name));
+  }
+  backToMenu();
+};
+window.addEventListener('beforeunload',()=>{try{peer&&peer.destroy()}catch(e){}});
+</script>
+</body>
+</html>
